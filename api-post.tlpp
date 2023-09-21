@@ -1,0 +1,76 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+#include "tlpp-rest.th"
+
+namespace AnimalIntegration
+
+#DEFINE HTTP_SUCCESS_GENERIC       200
+#DEFINE HTTP_BAD_REQUEST           400
+#DEFINE HTTP_INTERNAL_SERVER_ERROR 500
+
+User Function apiPostAnimal()
+	Local lRet := .T.
+Return lRet
+
+@POST(endpoint="/animal", description="Cadastrar animal no Protheus")
+User Function u_apiPostAnimal() as logical
+	Local cMsg := "" as character
+	Local lRet := .T. as logical
+	Static nStart := Seconds()
+
+	If ( FindFunction("AnimalIntegration.u_PostAnimal") )
+		AnimalIntegration.u_PostAnimal(,@oRest)
+	Else
+		lRet := .F.
+		cMsg := "Função TLPP 'AnimalIntegration.PostAnimal' não encontrada no RPO."
+		sendMsgFault(@oRest,cMsg)
+	Endif
+
+Return lRet
+
+// ----------------------
+
+
+#INCLUDE "tlpp-core.th"
+#INCLUDE "tlpp-rest.th"
+
+namespace AnimalIntegration
+
+#DEFINE HTTP_SUCCESS_GENERIC       200
+#DEFINE HTTP_BAD_REQUEST           400
+#DEFINE HTTP_INTERNAL_SERVER_ERROR 500
+
+USER FUNCTION PostAnimal()
+	LOCAL oParseJSON := NIL
+	LOCAL jBody := NIL
+	LOCAL oResponse := {}
+	Local cAlias    := GetNextAlias()
+
+	jBody := JsonObject():New()
+
+	jBody:FromJson(oRest:GetBodyRequest())
+
+	DbSelectArea('Z36')
+	RecLock('Z36', .T.) 
+	Z36->(Z36_NMRACA) := jBody:GetJsonObject("BreedName")
+	Z36->(Z36_CLASSE) := jBody:GetJsonObject("Class")
+	Z36->(Z36_PATAS) := jBody:GetJsonObject("HasPaws")
+	Z36->(Z36_PSMED) := jBody:GetJsonObject("AverageWeight")
+	Z36->(Z36_TMPVID) := jBody:GetJsonObject("AverageLifetime")
+	Z36->(Z36_FILIAL) := "0101001"
+
+	Z36->(MsUnLock())
+
+	Local oResponse     	:= JsonObject():New()
+
+	oResponse["Status"] := .T.
+	oResponse["Message"] := "Cadastrado com sucesso"
+	oResponse["Data"] := {}
+
+	//ELSE
+	// oResponse["Status"] := .F.
+	// oResponse["Message"] := "Propriedades não estão no formato esperado."
+	// oResponse["Data"] := {}
+	//ENDIF
+
+Return(oResponse, "application/json")
